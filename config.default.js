@@ -3,6 +3,10 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
+function getBoolean(str, defaultValue = false) {
+  return str ? str.toLowerCase() === 'true' : defaultValue;
+}
+
 function getFile(filePath) {
   if (filePath !== undefined && filePath) {
     try {
@@ -46,13 +50,18 @@ if (process.env.VCAP_SERVICES) {
   }
 }
 
+// ME_CONFIG_BASICAUTH deprecated, to be removed in next releases
 const basicAuth = 'ME_CONFIG_BASICAUTH';
+const basicAuthEnabled = 'ME_CONFIG_BASICAUTH_ENABLED';
 const basicAuthUsername = 'ME_CONFIG_BASICAUTH_USERNAME';
 const basicAuthPassword = 'ME_CONFIG_BASICAUTH_PASSWORD';
 
-function getBoolean(str, defaultValue = false) {
-  return str ? str.toLowerCase() === 'true' : defaultValue;
-}
+const oidcAuthEnabled = 'ME_CONFIG_OIDCAUTH_ENABLED';
+const oidcAuthBaseUrl = 'ME_CONFIG_OIDCAUTH_BASEURL';
+const oidcAuthIssuer = 'ME_CONFIG_OIDCAUTH_ISSUER';
+const oidcAuthClientId = 'ME_CONFIG_OIDCAUTH_CLIENTID';
+const oidcAuthClientSecret = 'ME_CONFIG_OIDCAUTH_CLIENTSECRET';
+const oidcAuthSecret = 'ME_CONFIG_OIDCAUTH_SECRET';
 
 export default {
   mongodb: {
@@ -92,6 +101,9 @@ export default {
     // if admin is true, you will need to enter an admin username/password below (if it is needed)
     admin: getBoolean(process.env.ME_CONFIG_MONGODB_ENABLE_ADMIN, false),
 
+    // This flag enhance AWS DocumentDB compatibility
+    awsDocumentDb: getBoolean(process.env.ME_CONFIG_MONGODB_AWS_DOCUMENTDB, false),
+
     // whitelist: hide all databases except the ones in this list  (empty list for no whitelist)
     whitelist: [],
 
@@ -119,13 +131,26 @@ export default {
   },
 
   // set useBasicAuth to true if you want to authenticate mongo-express logins
-  // if admin is false, the basicAuthInfo list below will be ignored
-  // this will be false unless ME_CONFIG_BASICAUTH is set to the true
-  useBasicAuth: getBoolean(getFileEnv(basicAuth)),
+  // this will be false unless ME_CONFIG_BASICAUTH_ENABLED is set to the true
+  useBasicAuth: getBoolean(getFileEnv(basicAuthEnabled) || getFileEnv(basicAuth)),
 
   basicAuth: {
     username: getFileEnv(basicAuthUsername) || 'admin',
     password: getFileEnv(basicAuthPassword) || 'pass',
+  },
+
+  useOidcAuth: getBoolean(getFileEnv(oidcAuthEnabled)),
+  oidcAuth: {
+    issuerBaseURL: getFileEnv(oidcAuthIssuer),
+    baseURL: getFileEnv(oidcAuthBaseUrl) || process.env.ME_CONFIG_SITE_BASEURL || '/',
+    clientAuthMethod: 'client_secret_basic',
+    clientSecret: getFileEnv(oidcAuthClientSecret),
+    clientID: getFileEnv(oidcAuthClientId),
+    secret: getFileEnv(oidcAuthSecret),
+    idpLogout: true,
+    authorizationParams: {
+      response_type: 'code',
+    },
   },
 
   options: {
